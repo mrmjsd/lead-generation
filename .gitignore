@@ -1,0 +1,7 @@
+__pycache__
+.venv/*
+.vscode
+node_modules/
+.DS_Store
+backend/.env
+backend/alembic/versions/*
