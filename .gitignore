@@ -6,3 +6,5 @@ node_modules/
 backend/.env
 backend/alembic/versions/*
 backend/app/media/*
+
+backend/.venv/*
