@@ -38,7 +38,8 @@ class InvoicesAnalyzer:
                 items_details.append({
                     'description': item.description,  # Access attributes directly
                     'amount': item.amount,
-                    'voucher_no': invoice.voucher_no
+                    'voucher_no': invoice.voucher_no,
+                    'employee': invoice.employee
                 })
         return items_details
 

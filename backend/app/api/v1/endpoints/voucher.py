@@ -82,7 +82,16 @@ async def analyse_vouchers(db: AsyncSession = Depends(get_db)):
     # supply_performance_data = analyzer.supply_performance()
     audit_records = analyzer.auditing()
 
-    return payment_dues, cash_flow, expense_categories, vendor_details, total_amount, item_details, payment_status_summary, audit_records
+    return {
+        "payment_dues": payment_dues,
+        "cash_flow": cash_flow,
+        "expense_categories": expense_categories,
+        "vendor_details": vendor_details,
+        "total_amount": total_amount,
+        "item_details": item_details,
+        "payment_status_summary": payment_status_summary,
+        "audit_records": audit_records
+    }
     
     
 

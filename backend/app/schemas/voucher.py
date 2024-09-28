@@ -96,8 +96,8 @@ class ItemModel(BaseModel):
     amount: float
 
 class EmployeeModel(BaseModel):
-    name: str
-    code: str
+    name: Optional[str] = None
+    code: Optional[str] = None
 
 class PaymentModel(BaseModel):
     method: str

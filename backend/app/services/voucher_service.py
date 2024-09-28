@@ -87,8 +87,8 @@ class VoucherService:
                 authorized_by=voucher.authorized_by,
                 receiver_signature=voucher.receiver_signature,
                 employee=EmployeeModel(
-                    name=voucher.employee.name if voucher.employee else "N/A",
-                    code=voucher.employee.code if voucher.employee else "N/A",
+                   name=voucher.employee.name if voucher.employee and voucher.employee.name else "N/A",
+                    code=voucher.employee.code if voucher.employee and voucher.employee.code else "N/A",
                 ),
                 payment=PaymentModel(
                     method=voucher.payment.method if voucher.payment else "N/A",
