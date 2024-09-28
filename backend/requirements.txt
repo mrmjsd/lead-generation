@@ -9,4 +9,7 @@ starlette==0.38.6
 pydantic
 google-generativeai
 sqlalchemy
-pydantic_settings
+pydantic-settings
+python-multipart
+cryptography
+pydantic==2.9.2

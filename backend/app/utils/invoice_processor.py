@@ -1,28 +1,42 @@
 import os
 from app.utils.parse_model import ParseModel
 from app.services.voucher_service import VoucherService
+import logging
+import glob
+
+
+logger = logging.getLogger(__name__)
+
 class InvoiceProcessor:
-    def __init__(self, file_name,db):
-        self.file_name = file_name
-        self.media_dir = self._create_media_dir()
+    def __init__(self,db):
         self.parse_model = ParseModel()
         self.db = db
+    async def process_pdf_files(self, upload_dir: str):
+        """Process each PDF file in the given directory."""
+        pdf_files = glob.glob(os.path.join(upload_dir, "*.pdf"))  # Get all PDF files in the directory
+
+        for file_path in pdf_files:
+            logger.info(f"Processing file: {file_path}")
+            
+            # Call your PDF upload method
+            sample_pdf = self.parse_model.upload_pdf_to_model(file_path)
+            
+            # Extract data from the PDF
+            parsed_data = self._extract_data(sample_pdf)
+            logger.info(f"Parsed data: {parsed_data}")
+            
+            # Pass the parsed data to VoucherService to create the voucher
+            voucher_service = VoucherService(self.db)
+            created_voucher = await voucher_service.create_voucher_from_json(parsed_data)
+            
+            logger.info(f"Created voucher: {created_voucher}")
         
-
-    def _create_media_dir(self):
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        media_dir = os.path.join(current_dir, "../media")
-        os.makedirs(media_dir, exist_ok=True)
-        return media_dir
-
-    def get_file_path(self):
-        return os.path.join(self.media_dir, self.file_name)
-
+        return "Processing complete!"
     async def parse_pdf(self):
         file_path = self.get_file_path()
         sample_pdf = self.parse_model.upload_pdf_to_model(file_path)
         parsed_data = self._extract_data(sample_pdf)
-
+        logger.info(f"Parsed data: {parsed_data}")
         # Pass the parsed data to VoucherService to create the voucher
         voucher_service = VoucherService(self.db)
         created_voucher =await voucher_service.create_voucher_from_json(parsed_data)

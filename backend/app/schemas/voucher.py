@@ -37,19 +37,19 @@ class AuditTrail(BaseModel):
 # Define the base class with all common fields
 class VoucherBase(BaseModel):
     date: str
-    voucher_no: str
-    prepared_by: str
-    approved_by: str
-    authorized_by: str
-    receiver_signature: str
+    voucher_no: Optional[str]  # Making optional since it can be NULL
+    prepared_by: Optional[str]  # Making optional since it can be NULL
+    approved_by: Optional[str]  # Making optional since it can be NULL
+    authorized_by: Optional[str]  # Making optional since it can be NULL
+    receiver_signature: Optional[str]  # Making optional since it can be NULL
     employee_id: Optional[int]  # Make optional for create/update cases
     payment_id: Optional[int]    # Make optional for create/update cases
     total_amount: float
-    in_words: str
-    expense_category: str
-    payment_status: str
-    payment_dues: float
-    cash_flow_impact: str
+    in_words: Optional[str]  # Making optional since it can be NULL
+    expense_category: Optional[str]  # Making optional since it can be NULL
+    payment_status: Optional[str]  # Making optional since it can be NULL
+    payment_dues: Optional[float]  # Making optional since it can be NULL
+    cash_flow_impact: Optional[str]  # Making optional since it can be NULL
     vendor_details_id: Optional[int]
     financial_reporting_id: Optional[int]
     supply_performance_id: Optional[int]

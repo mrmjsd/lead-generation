@@ -1,20 +1,31 @@
-from app.models.voucher import Voucher,Payment,SupplyPerformance,FinancialReporting,AuditTrail,VendorDetails,Item
+from app.models.voucher import Voucher,Item,Employee
 from app.schemas.voucher import VoucherCreate, VoucherUpdate, VoucherRead 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy import func
+from app.services.employee_service import EmployeeService
+from app.services.payment_service import PaymentService
+from app.services.vendor_details_service import VendorDetailsService
+from app.services.financial_reporting_service import FinancialReportingService
+from app.services.supply_performance_service import SupplyPerformanceService
+from app.services.audit_trail_service import AuditTrailService
 
 import logging
-from app.logging_config import LogConfig
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(LogConfig().LOGGER_NAME)
+logger = logging.getLogger(__name__)
 
 class VoucherService:
     def __init__(self, db: AsyncSession):
-        self.db = db
+        self.db:AsyncSession = db
+        self.employee_service = EmployeeService(db)
+        self.payment_service = PaymentService(db)
+        self.vendor_details_service = VendorDetailsService(db)
+        self.financial_reporting_service = FinancialReportingService(db)
+        self.supply_performance_service = SupplyPerformanceService(db)
+        self.audit_trail_service = AuditTrailService(db)
 
     async def create_voucher(self, voucher_data: VoucherCreate):
         try:
+            logger.info(f"Creating voucher: {voucher_data.dict()}")
             new_voucher = Voucher(**voucher_data.dict())
             self.db.add(new_voucher)
             await self.db.commit()
@@ -27,6 +38,7 @@ class VoucherService:
 
     async def get_voucher(self, voucher_id: int):
         try:
+            logger.info(f"Retrieving voucher with ID: {voucher_id}")
             result = await self.db.execute(select(Voucher).where(Voucher.id == voucher_id))
             voucher = result.scalar_one_or_none()
             if voucher:
@@ -40,6 +52,7 @@ class VoucherService:
 
     async def get_all_vouchers(self):
         try:
+            logger.info("Retrieving all vouchers")
             result = await self.db.execute(select(Voucher))
             vouchers = result.scalars().all()
             logger.info(f"Retrieved {len(vouchers)} vouchers")
@@ -78,84 +91,82 @@ class VoucherService:
             logger.error(f"Error deleting voucher with ID {voucher_id}: {e}")
             raise
 
-    async def create_voucher_from_json(self, data):
+    async def create_voucher_from_json(self, voucher_data):
         try:
-            # Create voucher entry
-            voucher = Voucher(
-                voucher_no=data['voucher']['voucher_no'],
-                date=data['voucher']['date'],
-                prepared_by=data['voucher']['prepared_by'],
-                approved_by=data['voucher']['approved_by'],
-                authorized_by=data['voucher']['authorized_by'],
-                receiver_signature=data['voucher']['receiver_signature'],
-                total_amount=data['voucher']['total_amount'],
-                in_words=data['voucher']['in_words'],
-                expense_category=data['voucher']['expense_category'],
-                payment_status=data['voucher']['payment_status'],
-                payment_dues=data['voucher']['payment_dues'],
-                cash_flow_impact=data['voucher']['cash_flow_impact'],
-            )
-            self.db.add(voucher)
-            self.db.commit()
-            self.db.refresh(voucher)
+            # Extract voucher information
+            voucher = voucher_data.get("voucher")
+            voucher_to = voucher.get("voucher_to")
+            vendor_details_data = voucher.get('vendor_details', {})
+            financial_reporting_data = voucher.get('financial_reporting', {})
+            supply_performance_data = voucher.get('supply_performance', {})
+            audit_trail_data = voucher.get('audit_trail', {})
 
-            # Create Payment entry
-            payment = Payment(
-                voucher_id=voucher.id,
-                method=data['voucher']['payment']['method'],
-                cheque_no=data['voucher']['payment']['cheque_no'],
-                cheque_date=data['voucher']['payment']['cheque_date'],
-                bank_name=data['voucher']['payment']['bank_name']
-            )
-            self.db.add(payment)
+            # Create or get the employee
+            employee_id = await self.employee_service.create_employee_if_not_exists(voucher_to)
 
-            # Create Item entries
-            for item_data in data['voucher']['items']:
+            # Prepare the payment details
+            payment_data = voucher.get("payment", {})
+            payment_id = None
+
+            # Create Payment if method is provided
+            payment_method = payment_data.get("method")
+            if payment_method:
+                payment = await self.payment_service.create_payment(payment_data)
+                payment_id = payment.id
+
+            # Create VendorDetails entry
+            vendor_details = await self.vendor_details_service.create_vendor_details(vendor_details_data)
+
+            # Create FinancialReporting entry
+            financial_reporting = await self.financial_reporting_service.create_financial_reporting(financial_reporting_data)
+
+            # Create SupplyPerformance entry
+            supply_performance = await self.supply_performance_service.create_supply_performance(supply_performance_data)
+
+            # Create AuditTrail entry
+            audit_trail = await self.audit_trail_service.create_audit_trail(audit_trail_data)
+
+            # Create the Voucher
+            new_voucher = Voucher(
+                date=voucher.get("date"),
+                voucher_no=voucher.get("voucher_no"),  # Handle this based on your earlier discussion
+                prepared_by=voucher.get("prepared_by"),
+                approved_by=voucher.get("approved_by"),
+                authorized_by=voucher.get("authorized_by"),
+                receiver_signature=voucher.get("receiver_signature"),
+                employee_id=employee_id,
+                payment_id=payment_id,
+                total_amount=voucher.get("total_amount"),
+                in_words=voucher.get("in_words"),
+                expense_category=voucher.get("expense_category"),
+                payment_status=voucher.get("payment_status"),
+                payment_dues=voucher.get("payment_dues"),
+                cash_flow_impact=voucher.get("cash_flow_impact"),
+                vendor_details_id=vendor_details.id,
+                financial_reporting_id=financial_reporting.id,
+                supply_performance_id=supply_performance.id,
+                audit_trail_id=audit_trail.id
+            )
+
+            self.db.add(new_voucher)
+            await self.db.commit()
+            await self.db.refresh(new_voucher)  # Refresh to get the ID
+            # Add Items
+            items_data = voucher.get("items", [])
+            for item_data in items_data:
                 item = Item(
-                    voucher_id=voucher.id,
-                    description=item_data['description'],
-                    amount=item_data['amount'],
-                    category=item_data.get('category', None)  # Optional category
+                    description=item_data.get("description"),
+                    amount=item_data.get("amount"),
+                    voucher_id=new_voucher.id  # Associate the item with the new voucher
                 )
                 self.db.add(item)
 
-            # Create Vendor Details entry
-            vendor_details = VendorDetails(
-                voucher_id=voucher.id,
-                vendor_name=data['voucher']['vendor_details']['vendor_name'],
-                vendor_contact=data['voucher']['vendor_details']['vendor_contact'],
-                vendor_address=data['voucher']['vendor_details']['vendor_address']
-            )
-            self.db.add(vendor_details)
+            # Commit all items after adding
+            await self.db.commit()
 
-            # Create Financial Reporting entry
-            financial_reporting = FinancialReporting(
-                voucher_id=voucher.id,
-                report_period=data['voucher']['financial_reporting']['report_period'],
-                report_type=data['voucher']['financial_reporting']['report_type']
-            )
-            self.db.add(financial_reporting)
+            logger.info(f"Voucher created with ID: {new_voucher.id}")
+            return new_voucher
 
-            # Create Supply Performance entry
-            supply_performance = SupplyPerformance(
-                voucher_id=voucher.id,
-                performance_metrics=data['voucher']['supply_performance']['performance_metrics']
-            )
-            self.db.add(supply_performance)
-
-            # Create Audit Trail entry
-            audit_trail = AuditTrail(
-                voucher_id=voucher.id,
-                approver=data['voucher']['audit_trail']['approver'],
-                preparer=data['voucher']['audit_trail']['preparer'],
-                audit_date=data['voucher']['audit_trail']['audit_date']
-            )
-            self.db.add(audit_trail)
-
-            # Commit all changes to the database
-            self.db.commit()
-
-            return voucher
         except Exception as e:
             logger.error(f"Error creating voucher from JSON: {e}")
             raise
