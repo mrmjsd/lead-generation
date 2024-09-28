@@ -38,6 +38,8 @@ Create a `.env` file in the backend  directory with the following variables:
 	alembic revision --autogenerate -m "Initial migration"
 ### 7. Apply the migration
 	alembic upgrade head
+	alembic init alembic
+
 ### 8. Run the Application
 	uvicorn app.main:app --reload
 ### 9. Access the API Documentation

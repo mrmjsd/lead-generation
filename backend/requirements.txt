@@ -1,0 +1,12 @@
+aiomysql==0.2.0
+fastapi==0.115.0
+fastapi-cli==0.0.5
+greenlet==3.1.1
+PyMySQL==1.1.1
+python-dotenv==1.0.1
+PyYAML==6.0.2
+starlette==0.38.6
+pydantic
+google-generativeai
+sqlalchemy
+pydantic_settings
