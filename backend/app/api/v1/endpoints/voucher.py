@@ -6,6 +6,9 @@ from app.services.voucher_service import VoucherService
 from app.schemas.voucher import VoucherCreate, VoucherUpdate,VoucherRead
 from app.utils.invoice_processor import InvoiceProcessor
 from app.utils.constant import get_file_uploader_dir
+from app.schemas.voucher import VoucherModel
+from typing import List
+from app.services.invoice_analyzer import InvoicesAnalyzer
 router = APIRouter()
 
 @router.post("/vouchers/", response_model=VoucherCreate)
@@ -14,6 +17,11 @@ async def create_voucher(voucher: VoucherCreate,  db: AsyncSession = Depends(get
     new_voucher=await service.create_voucher(voucher)
     return new_voucher
 
+@router.get("/vouchers/", response_model=List[VoucherModel])
+async def read_all_vouchers(db: AsyncSession = Depends(get_db)):
+    service = VoucherService(db)
+    vouchers = await service.get_all_vouchers()  # Await the async service call
+    return vouchers  # Return the awaited result
 @router.get("/vouchers/{voucher_id}", response_model=VoucherRead)
 async def read_voucher(voucher_id: int, db: AsyncSession = Depends(get_db)):
     service = VoucherService(db)
@@ -22,11 +30,7 @@ async def read_voucher(voucher_id: int, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Voucher not found")
     return voucher
 
-@router.get("/vouchers/", response_model=list[VoucherRead])
-async def read_all_vouchers(db: AsyncSession = Depends(get_db)):
-    service = VoucherService(db)
-    vouchers = await service.get_all_vouchers()  # Await the async service call
-    return vouchers  # Return the awaited result
+
 
 @router.put("/vouchers/{voucher_id}", response_model=VoucherCreate)
 async def update_voucher(voucher_id: int, voucher_update: VoucherUpdate, db: AsyncSession = Depends(get_db)):
@@ -63,4 +67,22 @@ async def process_pdfs(db: AsyncSession = Depends(get_db)):
     
     return {"message": result}
 
+@router.get("/voucher/analysis")  # No response model
+async def analyse_vouchers(db: AsyncSession = Depends(get_db)):
+    service = VoucherService(db)
+    vouchers = await service.get_all_vouchers()  # Await the async service call
+    analyzer=InvoicesAnalyzer(vouchers)
+    payment_dues=analyzer.calculate_payment_dues()
+    cash_flow=analyzer.analyze_cashflow()
+    expense_categories = analyzer.categorize_expenses()
+    vendor_details = analyzer.get_vendor_details()
+    total_amount = analyzer.total_amounts()
+    item_details = analyzer.list_item_details()
+    payment_status_summary = analyzer.payment_status()
+    # supply_performance_data = analyzer.supply_performance()
+    audit_records = analyzer.auditing()
+
+    return payment_dues, cash_flow, expense_categories, vendor_details, total_amount, item_details, payment_status_summary, audit_records
+    
+    
 

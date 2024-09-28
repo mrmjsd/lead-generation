@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from typing import List, Optional
-from datetime import date
+from datetime import datetime
+
 
 class Employee(BaseModel):
     name: str
@@ -8,9 +9,9 @@ class Employee(BaseModel):
 
 class Payment(BaseModel):
     method: str
-    cheque_no: Optional[str]
-    cheque_date: Optional[str]
-    bank_name: Optional[str]
+    cheque_no: Optional[str] = "N/A"
+    cheque_date: Optional[str] = "N/A"
+    bank_name: Optional[str] = "N/A"
 
 class Item(BaseModel):
     description: str
@@ -24,8 +25,10 @@ class FinancialReporting(BaseModel):
     report_period: str
     report_type: str
 
-class SupplyPerformance(BaseModel):
-    performance_metrics: str
+class SupplyPerformanceModel(BaseModel):
+    performance_metrics: str  # or other fields...
+    class Config:
+        arbitrary_types_allowed = True
 
 class AuditTrail(BaseModel):
     approver: str
@@ -87,3 +90,48 @@ class VoucherUpdate(VoucherBase):
     financial_reporting_id: Optional[int] = None
     supply_performance_id: Optional[int] = None
     audit_trail_id: Optional[int] = None
+
+class ItemModel(BaseModel):
+    description: str
+    amount: float
+
+class EmployeeModel(BaseModel):
+    name: str
+    code: str
+
+class PaymentModel(BaseModel):
+    method: str
+    cheque_no: Optional[str]
+    cheque_date: Optional[str]
+    bank_name: Optional[str]
+
+class VendorDetailsModel(BaseModel):
+    vendor_name: Optional[str]
+    vendor_contact: Optional[str]
+
+class AuditTrailModel(BaseModel):
+    approver: Optional[str]
+    preparer: Optional[str]
+    audit_date: Optional[datetime]
+
+class VoucherModel(BaseModel):
+    date: str
+    voucher_no: Optional[str]
+    prepared_by: Optional[str]
+    approved_by: Optional[str]
+    authorized_by: Optional[str]
+    receiver_signature: Optional[str]
+    employee: EmployeeModel
+    payment: PaymentModel
+    items: List[ItemModel]
+    total_amount: float
+    in_words: str
+    expense_category: str
+    payment_status: str
+    payment_dues: float
+    cash_flow_impact: str
+    vendor_details: VendorDetailsModel
+    audit_trail: AuditTrailModel
+
+    class Config:
+        from_attributes = True  # Allow from_orm usage        

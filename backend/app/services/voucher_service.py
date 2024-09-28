@@ -9,7 +9,8 @@ from app.services.vendor_details_service import VendorDetailsService
 from app.services.financial_reporting_service import FinancialReportingService
 from app.services.supply_performance_service import SupplyPerformanceService
 from app.services.audit_trail_service import AuditTrailService
-
+from sqlalchemy.orm import selectinload
+from app.schemas.voucher import VoucherModel,EmployeeModel,ItemModel,PaymentModel,VendorDetailsModel,AuditTrailModel
 import logging
 logger = logging.getLogger(__name__)
 
@@ -53,13 +54,71 @@ class VoucherService:
     async def get_all_vouchers(self):
         try:
             logger.info("Retrieving all vouchers")
-            result = await self.db.execute(select(Voucher))
+            stmt = (
+                select(Voucher)
+                .options(
+                    selectinload(Voucher.employee),
+                    selectinload(Voucher.payment),
+                    selectinload(Voucher.items),
+                    selectinload(Voucher.vendor_details),
+                    selectinload(Voucher.financial_reporting),
+                    selectinload(Voucher.supply_performance),
+                    selectinload(Voucher.audit_trail)
+                )
+            )
+            result = await self.db.execute(stmt)
             vouchers = result.scalars().all()
+            response=await self.format_fetched_data(vouchers)
             logger.info(f"Retrieved {len(vouchers)} vouchers")
-            return [VoucherRead.model_validate(voucher) for voucher in vouchers]
+            return response
         except Exception as e:
             logger.error(f"Error retrieving all vouchers: {e}")
             raise
+        
+    async def format_fetched_data(self,vouchers):
+        response_data = []
+
+        for voucher in vouchers:
+            response_data.append(VoucherModel(
+                date=voucher.date,
+                voucher_no=voucher.voucher_no,
+                prepared_by=voucher.prepared_by,
+                approved_by=voucher.approved_by,
+                authorized_by=voucher.authorized_by,
+                receiver_signature=voucher.receiver_signature,
+                employee=EmployeeModel(
+                    name=voucher.employee.name if voucher.employee else "N/A",
+                    code=voucher.employee.code if voucher.employee else "N/A",
+                ),
+                payment=PaymentModel(
+                    method=voucher.payment.method if voucher.payment else "N/A",
+                    cheque_no=voucher.payment.cheque_no if voucher.payment else "N/A",
+                    cheque_date=voucher.payment.cheque_date if voucher.payment else "N/A",
+                    bank_name=voucher.payment.bank_name if voucher.payment else "N/A",
+                ),
+                items=[
+                    ItemModel(description=item.description, amount=item.amount)
+                    for item in voucher.items
+                ],
+                total_amount=voucher.total_amount,
+                in_words=voucher.in_words,
+                expense_category=voucher.expense_category,
+                payment_status=voucher.payment_status,
+                payment_dues=voucher.payment_dues,
+                cash_flow_impact=voucher.cash_flow_impact,
+                vendor_details=VendorDetailsModel(
+                    vendor_name=voucher.vendor_details.vendor_name if voucher.vendor_details else "N/A",
+                    vendor_contact=voucher.vendor_details.vendor_contact if voucher.vendor_details else "N/A"
+                ),
+                audit_trail=AuditTrailModel(
+                    approver=voucher.audit_trail.approver if voucher.audit_trail else "N/A",
+                    preparer=voucher.audit_trail.preparer if voucher.audit_trail else "N/A",
+                    audit_date=voucher.audit_trail.audit_date if voucher.audit_trail else None,
+                )
+            ))
+
+        return response_data
+
 
     async def update_voucher(self, voucher_id: int, voucher_update: VoucherUpdate):
         try:
