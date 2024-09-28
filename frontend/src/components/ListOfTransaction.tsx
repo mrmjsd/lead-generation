@@ -34,7 +34,7 @@ const ListOfTransaction = ({ item_details }: { item_details: ItemDetails[] }) =>
                                             <h4>{employee?.name ==='N/A'?description:employee?.name}</h4>
                                         </div>
                                     </td>
-                                    <td>{amount} %</td>
+                                    <td>{amount} ₹</td>
                                 </tr>
                             )
                         }
