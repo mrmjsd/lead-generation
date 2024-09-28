@@ -5,8 +5,8 @@ from app.db.base import Base
 class Employee(Base):
     __tablename__ = "employees"
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(length=255), nullable=False)
-    code = Column(String(length=255), nullable=False)
+    name = Column(String(length=255), nullable=True)
+    code = Column(String(length=255), nullable=True)
 
 class Payment(Base):
     __tablename__ = "payments"

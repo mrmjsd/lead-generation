@@ -10,7 +10,7 @@ class PaymentService:
 
     async def create_payment(self, payment_data: PaymentCreate):
         try:
-            new_payment = Payment(**payment_data.model_dump())
+            new_payment = Payment(**payment_data)
             self.db.add(new_payment)
             await self.db.commit()
             await self.db.refresh(new_payment)

@@ -92,6 +92,7 @@ class VoucherService:
             raise
 
     async def create_voucher_from_json(self, voucher_data):
+        logger.info(f"Creating voucher from JSON: {voucher_data}")
         try:
             # Extract voucher information
             voucher = voucher_data.get("voucher")
